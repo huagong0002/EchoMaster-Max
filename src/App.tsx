@@ -1,4 +1,4 @@
-const API_BASE = "https://www.sd-education.online"; // 指向您后端运行的主域名
+const API_BASE = ""; // 使用相对路径以确保在子域名和主域名下都能正确访问后端 API
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Play, 
@@ -64,8 +64,9 @@ export default function App() {
           const data = await response.json();
           setMaterials(data);
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error("Backend Library Load Error", e);
+        console.error(`Attempted URL: ${API_BASE || window.location.origin}/api/materials`);
         // Fallback to localStorage if backend fails
         const savedLibrary = localStorage.getItem('echomaster_library');
         if (savedLibrary) setMaterials(JSON.parse(savedLibrary));
@@ -98,8 +99,9 @@ export default function App() {
             body: JSON.stringify({ materials })
           });
           localStorage.setItem('echomaster_library', JSON.stringify(materials));
-        } catch (e) {
+        } catch (e: any) {
           console.error("Backend Sync Error", e);
+          console.error(`Attempted sync URL: ${API_BASE || window.location.origin}/api/materials/sync`);
         }
       }
     };
@@ -205,7 +207,9 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('CRITICAL: Login Network Error', err);
-      setAuthError(`网络连接失败: ${err.message || '未知错误'}`);
+      const targetUrl = `${API_BASE || window.location.origin}/api/login`;
+      console.error(`Failed target: ${targetUrl}`);
+      setAuthError(`网络连接失败: ${err.message || '未知错误'}。 请求地址: ${targetUrl}`);
     }
   };
 
@@ -249,7 +253,8 @@ export default function App() {
       }
     } catch (err: any) {
       console.error('CRITICAL: Register Network Error', err);
-      setAuthError(`注册过程发生网络错误: ${err.message || '无法连接服务器'}`);
+      const targetUrl = `${API_BASE || window.location.origin}/api/register`;
+      setAuthError(`注册失败: ${err.message || '无法连接服务器'}。 地址: ${targetUrl}`);
     }
   };
 
@@ -264,8 +269,9 @@ export default function App() {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
         if (res.ok) console.log("Server health check passed");
-      } catch (e) {
-        console.error("Server health check FAILED. Potential network/server issue.", e);
+      } catch (e: any) {
+        console.error("Server health check FAILED.", e);
+        console.error(`Check URL: ${API_BASE || window.location.origin}/api/health`);
       }
     };
     checkServer();

@@ -17,7 +17,12 @@ async function startServer() {
   app.set('trust proxy', true);
 
   // 1. Basic Middlewares
-  app.use(cors()); // Allow all origins for the applet environment
+  app.use(cors({
+    origin: true, // Reflect the request origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
+  }));
   app.use(express.json({ limit: '50mb' }));
 
   // 2. Logger Middleware
