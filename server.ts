@@ -39,7 +39,7 @@ async function startServer() {
     res.json({ status: 'ok', serverTime: new Date().toISOString() });
   });
 
-  app.post('/api/auth/login', (req, res) => {
+  const handleLogin = (req, res) => {
     const { username, password } = req.body;
     console.log(`> Login target: ${username}`);
     const user = USERS.find(u => u.username === username && u.password === password);
@@ -51,9 +51,9 @@ async function startServer() {
       console.warn(`! Invalid login for: ${username}`);
       res.status(401).json({ error: '用户名或密码错误' });
     }
-  });
+  };
 
-  app.post('/api/auth/register', (req, res) => {
+  const handleRegister = (req, res) => {
     const { username, password } = req.body;
     console.log(`> Register attempt: ${username}`);
     
@@ -65,7 +65,12 @@ async function startServer() {
     USERS.push(newUser);
     const { password: _, ...userWithoutPassword } = newUser;
     res.json({ success: true, user: userWithoutPassword });
-  });
+  };
+
+  app.post('/api/auth/login', handleLogin);
+  app.post('/api/login', handleLogin); // Alias
+  app.post('/api/auth/register', handleRegister);
+  app.post('/api/register', handleRegister); // Alias
 
   app.get('/api/materials', (req, res) => {
     res.json(GLOBAL_STORE);

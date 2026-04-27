@@ -169,14 +169,21 @@ export default function App() {
         body: JSON.stringify({ username: authData.username.trim(), password: authData.password })
       });
       
-      const data = await res.json();
-      if (res.ok) {
-        console.log('Login Success:', data.user.username);
-        setUser(data.user);
-        localStorage.setItem('echomaster_user', JSON.stringify(data.user));
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (res.ok) {
+          console.log('Login Success:', data.user.username);
+          setUser(data.user);
+          localStorage.setItem('echomaster_user', JSON.stringify(data.user));
+        } else {
+          console.warn('Login Rejected:', data.error);
+          setAuthError(data.error);
+        }
       } else {
-        console.warn('Login Rejected:', data.error);
-        setAuthError(data.error);
+        const text = await res.text();
+        console.error('Non-JSON response received:', text.substring(0, 100));
+        setAuthError(`服务器异常 (HTTP ${res.status}): 请检查网络或联系管理员`);
       }
     } catch (err: any) {
       console.error('CRITICAL: Login Network Error', err);
@@ -200,14 +207,21 @@ export default function App() {
         })
       });
       
-      const data = await res.json();
-      if (res.ok) {
-        console.log('Register Success:', data.user.username);
-        setUser(data.user);
-        localStorage.setItem('echomaster_user', JSON.stringify(data.user));
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (res.ok) {
+          console.log('Register Success:', data.user.username);
+          setUser(data.user);
+          localStorage.setItem('echomaster_user', JSON.stringify(data.user));
+        } else {
+          console.warn('Register Rejected:', data.error);
+          setAuthError(data.error);
+        }
       } else {
-        console.warn('Register Rejected:', data.error);
-        setAuthError(data.error);
+        const text = await res.text();
+        console.error('Register Non-JSON response:', text.substring(0, 100));
+        setAuthError(`注册失败 (HTTP ${res.status}): 服务器暂时不可用`);
       }
     } catch (err: any) {
       console.error('CRITICAL: Register Network Error', err);
