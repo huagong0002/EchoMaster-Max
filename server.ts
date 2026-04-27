@@ -2,12 +2,13 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import crypto from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
+  console.log('Starting server...');
   const app = express();
   const PORT = 3000;
 
@@ -20,7 +21,12 @@ async function startServer() {
   ];
 
   // API Routes
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   app.post('/api/auth/login', (req, res) => {
+    console.log(`Login attempt for: ${req.body.username}`);
     const { username, password } = req.body;
     const user = USERS.find(u => u.username === username && u.password === password);
     if (user) {
@@ -32,11 +38,12 @@ async function startServer() {
   });
 
   app.post('/api/auth/register', (req, res) => {
+    console.log(`Register attempt for: ${req.body.username}`);
     const { username, password } = req.body;
     if (USERS.find(u => u.username === username)) {
       return res.status(400).json({ error: '用户名已存在' });
     }
-    const newUser = { id: crypto.randomUUID(), username, password, email: '', role: 'user' };
+    const newUser = { id: randomUUID(), username, password, email: '', role: 'user' };
     USERS.push(newUser);
     const { password: _, ...userWithoutPassword } = newUser;
     res.json({ success: true, user: userWithoutPassword });

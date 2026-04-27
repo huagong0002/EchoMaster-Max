@@ -202,8 +202,18 @@ export default function App() {
     localStorage.removeItem('echomaster_user');
   };
 
-  // Check for saved user session
+  // Check for saved user session and server health
   useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) console.log("Server health check passed");
+      } catch (e) {
+        console.error("Server health check FAILED. Potential network/server issue.", e);
+      }
+    };
+    checkServer();
+
     const savedUser = localStorage.getItem('echomaster_user');
     if (savedUser) {
       try {
