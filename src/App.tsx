@@ -1,3 +1,4 @@
+const API_BASE = "https://www.sd-education.online"; // 指向您后端运行的主域名
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Play, 
@@ -158,16 +159,22 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    console.log('--- Attempting Login ---');
+    const timestamp = Date.now();
+    const apiUrl = `/api/login?t=${timestamp}`;
+    console.log(`--- Attempting Login ---`);
+    console.log(`Fetching from: ${window.location.origin}${apiUrl}`);
+    
     try {
-      // 优先尝试当前域名的 /api/login
-      const apiUrl = '/api/login';
-      console.log(`Fetching from: ${window.location.origin}${apiUrl}`);
-      
       const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: authData.username.trim(), password: authData.password })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          username: authData.username.trim(), 
+          password: authData.password 
+        })
       });
       
       const contentType = res.headers.get('content-type');
@@ -183,13 +190,21 @@ export default function App() {
         }
       } else {
         const text = await res.text();
-        console.error('Non-JSON response (404/Error Page):', text.substring(0, 50));
-        // 如果 404，提示用户检查后端部署
-        setAuthError(`登录失败 (${res.status}): 无法连接到验证服务器。请检查 ${window.location.host} 的后端服务配置。如果是自定义域名，请确保 API 转发规则已生效。`);
+        console.error('Login Error Response:', {
+          status: res.status,
+          statusText: res.statusText,
+          contentType,
+          bodyStart: text.substring(0, 100)
+        });
+        
+        if (res.status === 404) {
+          setAuthError(`登录失败 (404): 服务器路径未找到。请确 ${window.location.host} 的 API 转发规则已生效。`);
+        } else {
+          setAuthError(`服务器异常 (${res.status}): ${text.substring(0, 20)}...`);
+        }
       }
     } catch (err: any) {
       console.error('CRITICAL: Login Network Error', err);
-      // Detailed error for user
       setAuthError(`网络连接失败: ${err.message || '未知错误'}`);
     }
   };
@@ -197,12 +212,16 @@ export default function App() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    const timestamp = Date.now();
+    const apiUrl = `/api/register?t=${timestamp}`;
     console.log('--- Attempting Register ---');
     try {
-      const apiUrl = '/api/register';
       const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ 
           username: authData.username.trim(), 
           password: authData.password 
@@ -222,8 +241,11 @@ export default function App() {
         }
       } else {
         const text = await res.text();
-        console.error('Register Non-JSON response:', text.substring(0, 50));
-        setAuthError(`注册失败 (HTTP ${res.status}): 服务器路由未找到`);
+        console.error('Register Non-JSON response:', {
+          status: res.status,
+          bodyStart: text.substring(0, 50)
+        });
+        setAuthError(`注册失败 (${res.status}): 服务器路由未找到`);
       }
     } catch (err: any) {
       console.error('CRITICAL: Register Network Error', err);

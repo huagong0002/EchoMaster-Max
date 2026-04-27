@@ -36,15 +36,20 @@ async function startServer() {
   ];
 
   // 3. API Routes
+  app.get('/ping', (req, res) => res.send('pong'));
   app.get('/api/health', (req, res) => {
+    res.set('Cache-Control', 'no-store');
     res.json({ status: 'ok', serverTime: new Date().toISOString() });
   });
 
   const handleLogin = (req, res) => {
-    const { username, password } = req.body;
-    console.log(`> Login target: ${username}`);
+    const { username, password } = req.method === 'GET' ? req.query : req.body;
+    console.log(`[AUTH] Login target: ${username} (Method: ${req.method})`);
+    
+    // In strict mode, only allow POST, but keep GET for debug/bypass if needed
     const user = USERS.find(u => u.username === username && u.password === password);
     
+    res.set('Cache-Control', 'no-store');
     if (user) {
       const { password: _, ...userWithoutPassword } = user;
       res.json({ success: true, user: userWithoutPassword });
@@ -56,8 +61,9 @@ async function startServer() {
 
   const handleRegister = (req, res) => {
     const { username, password } = req.body;
-    console.log(`> Register attempt: ${username}`);
+    console.log(`[AUTH] Register attempt: ${username}`);
     
+    res.set('Cache-Control', 'no-store');
     if (USERS.find(u => u.username === username)) {
       return res.status(400).json({ error: '该用户名已被占用' });
     }
@@ -68,14 +74,12 @@ async function startServer() {
     res.json({ success: true, user: userWithoutPassword });
   };
 
-  app.post('/api/auth/login', handleLogin);
-  app.post('/api/login', handleLogin);
-  app.post('/auth/login', handleLogin);
-  app.post('/login', handleLogin); // 最简路径
-  app.post('/api/auth/register', handleRegister);
-  app.post('/api/register', handleRegister);
-  app.post('/auth/register', handleRegister);
-  app.post('/register', handleRegister); // 最简路径
+  // Support multiple paths and both GET/POST for maximum compatibility with proxy redirects
+  const loginPaths = ['/api/login', '/api/login/', '/api/auth/login', '/auth/login', '/login'];
+  const registerPaths = ['/api/register', '/api/register/', '/api/auth/register', '/auth/register', '/register'];
+
+  app.all(loginPaths, handleLogin);
+  app.all(registerPaths, handleRegister);
 
   app.get('/debug/host', (req, res) => {
     res.json({
