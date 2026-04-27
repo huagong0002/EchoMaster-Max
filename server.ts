@@ -13,6 +13,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // 0. Trust Proxy for Cloudflare/Load Balancers
+  app.set('trust proxy', true);
+
   // 1. Basic Middlewares
   app.use(cors()); // Allow all origins for the applet environment
   app.use(express.json({ limit: '50mb' }));
@@ -92,11 +95,13 @@ async function startServer() {
   });
 
   app.get('/api/materials', (req, res) => {
+    res.set('Cache-Control', 'no-store');
     res.json(GLOBAL_STORE);
   });
 
   app.post('/api/materials/sync', (req, res) => {
     const { materials } = req.body;
+    res.set('Cache-Control', 'no-store');
     if (Array.isArray(materials)) {
       materials.forEach(newM => {
         const index = GLOBAL_STORE.findIndex(m => m.id === newM.id);
