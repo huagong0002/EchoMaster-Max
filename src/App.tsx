@@ -185,7 +185,7 @@ export default function App() {
         const text = await res.text();
         console.error('Non-JSON response (404/Error Page):', text.substring(0, 50));
         // 如果 404，提示用户检查后端部署
-        setAuthError(`登录接口返回异常 (${res.status}): 请确保后端服务已启动且路径正确`);
+        setAuthError(`登录失败 (${res.status}): 请求地址 ${window.location.host}${apiUrl} 未找到。请确保您的自定义域名已正确指向此服务。`);
       }
     } catch (err: any) {
       console.error('CRITICAL: Login Network Error', err);

@@ -72,12 +72,6 @@ async function startServer() {
   app.post('/api/auth/register', handleRegister);
   app.post('/api/register', handleRegister);
 
-  // 4. API 404 Handler - MUST be before Vite/Static
-  app.use('/api/*', (req, res) => {
-    console.error(`API Route Not Found: ${req.method} ${req.originalUrl}`);
-    res.status(404).json({ error: `API 接口不存在: ${req.originalUrl}` });
-  });
-
   app.get('/api/materials', (req, res) => {
     res.json(GLOBAL_STORE);
   });
@@ -85,13 +79,9 @@ async function startServer() {
   app.post('/api/materials/sync', (req, res) => {
     const { materials } = req.body;
     if (Array.isArray(materials)) {
-      // Basic merge logic: replace or merge based on ID
-      // For this demo, we'll just replace the global store with the latest sync if it's more comprehensive
-      // or simply maintain a master list by ID.
       materials.forEach(newM => {
         const index = GLOBAL_STORE.findIndex(m => m.id === newM.id);
         if (index !== -1) {
-          // Only update if the incoming one is newer
           if (newM.lastModified > GLOBAL_STORE[index].lastModified) {
             GLOBAL_STORE[index] = newM;
           }
@@ -99,10 +89,7 @@ async function startServer() {
           GLOBAL_STORE.push(newM);
         }
       });
-      
-      // Sort by lastModified
       GLOBAL_STORE.sort((a, b) => b.lastModified - a.lastModified);
-      
       res.json({ success: true, count: GLOBAL_STORE.length });
     } else {
       res.status(400).json({ error: 'Invalid materials data' });
@@ -113,6 +100,17 @@ async function startServer() {
     const { id } = req.params;
     GLOBAL_STORE = GLOBAL_STORE.filter(m => m.id !== id);
     res.json({ success: true });
+  });
+
+  // 4. API 404 Handler - MUST be after ALL API routes but BEFORE Vite/Static
+  app.use('/api/*', (req, res) => {
+    console.warn(`[API 404] ${req.method} ${req.originalUrl} - Host: ${req.get('host')}`);
+    res.status(404).json({ 
+      error: 'API 接口不存在', 
+      path: req.originalUrl,
+      method: req.method,
+      suggestion: '请确认请求路径和方法(POST/GET)是否正确'
+    });
   });
 
   // Vite middleware for development
