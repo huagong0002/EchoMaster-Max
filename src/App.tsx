@@ -158,42 +158,60 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    console.log('--- Attempting Login ---');
     try {
-      const res = await fetch('/api/auth/login', {
+      const apiUrl = '/api/auth/login';
+      console.log(`Fetching: ${window.location.origin}${apiUrl}`);
+      
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: authData.username, password: authData.password })
+        body: JSON.stringify({ username: authData.username.trim(), password: authData.password })
       });
+      
       const data = await res.json();
       if (res.ok) {
+        console.log('Login Success:', data.user.username);
         setUser(data.user);
         localStorage.setItem('echomaster_user', JSON.stringify(data.user));
       } else {
+        console.warn('Login Rejected:', data.error);
         setAuthError(data.error);
       }
-    } catch (e) {
-      setAuthError('网络连接失败');
+    } catch (err: any) {
+      console.error('CRITICAL: Login Network Error', err);
+      // Detailed error for user
+      setAuthError(`网络连接失败: ${err.message || '未知错误'}`);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
+    console.log('--- Attempting Register ---');
     try {
-      const res = await fetch('/api/auth/register', {
+      const apiUrl = '/api/auth/register';
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(authData)
+        body: JSON.stringify({ 
+          username: authData.username.trim(), 
+          password: authData.password 
+        })
       });
+      
       const data = await res.json();
       if (res.ok) {
+        console.log('Register Success:', data.user.username);
         setUser(data.user);
         localStorage.setItem('echomaster_user', JSON.stringify(data.user));
       } else {
+        console.warn('Register Rejected:', data.error);
         setAuthError(data.error);
       }
-    } catch (e) {
-      setAuthError('注册失败');
+    } catch (err: any) {
+      console.error('CRITICAL: Register Network Error', err);
+      setAuthError(`注册过程发生网络错误: ${err.message || '无法连接服务器'}`);
     }
   };
 

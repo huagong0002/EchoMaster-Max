@@ -3,46 +3,64 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'node:crypto';
+import cors from 'cors';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function startServer() {
-  console.log('Starting server...');
+  console.log('--- Starting EchoMaster Server ---');
   const app = express();
   const PORT = 3000;
 
+  // 1. Basic Middlewares
+  app.use(cors()); // Allow all origins for the applet environment
   app.use(express.json({ limit: '50mb' }));
+
+  // 2. Logger Middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+    });
+    next();
+  });
 
   // In-memory Global Store for materials
   let GLOBAL_STORE: any[] = [];
   let USERS: any[] = [
-    { id: '1', username: 'admin', password: 'admin', email: 'admin@e-listen.com', role: 'admin' }
+    { id: '1', username: 'admin', password: 'admin', email: 'admin@e-listen.com', role: 'admin' },
+    { id: '2', username: 'tester', password: 'password', email: 'tester@example.com', role: 'user' }
   ];
 
-  // API Routes
+  // 3. API Routes
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', serverTime: new Date().toISOString() });
   });
 
   app.post('/api/auth/login', (req, res) => {
-    console.log(`Login attempt for: ${req.body.username}`);
     const { username, password } = req.body;
+    console.log(`> Login target: ${username}`);
     const user = USERS.find(u => u.username === username && u.password === password);
+    
     if (user) {
-      const { password, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
       res.json({ success: true, user: userWithoutPassword });
     } else {
+      console.warn(`! Invalid login for: ${username}`);
       res.status(401).json({ error: '用户名或密码错误' });
     }
   });
 
   app.post('/api/auth/register', (req, res) => {
-    console.log(`Register attempt for: ${req.body.username}`);
     const { username, password } = req.body;
+    console.log(`> Register attempt: ${username}`);
+    
     if (USERS.find(u => u.username === username)) {
-      return res.status(400).json({ error: '用户名已存在' });
+      return res.status(400).json({ error: '该用户名已被占用' });
     }
+    
     const newUser = { id: randomUUID(), username, password, email: '', role: 'user' };
     USERS.push(newUser);
     const { password: _, ...userWithoutPassword } = newUser;
