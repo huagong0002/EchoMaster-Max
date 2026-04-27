@@ -20,9 +20,10 @@ async function startServer() {
   // 2. Logger Middleware
   app.use((req, res, next) => {
     const start = Date.now();
+    console.log(`[REQ] ${req.method} ${req.url} - Host: ${req.get('host')} - Origin: ${req.get('origin')}`);
     res.on('finish', () => {
       const duration = Date.now() - start;
-      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+      console.log(`[RES] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
     });
     next();
   });
@@ -69,8 +70,22 @@ async function startServer() {
 
   app.post('/api/auth/login', handleLogin);
   app.post('/api/login', handleLogin);
+  app.post('/auth/login', handleLogin);
+  app.post('/login', handleLogin); // 最简路径
   app.post('/api/auth/register', handleRegister);
   app.post('/api/register', handleRegister);
+  app.post('/auth/register', handleRegister);
+  app.post('/register', handleRegister); // 最简路径
+
+  app.get('/debug/host', (req, res) => {
+    res.json({
+      host: req.get('host'),
+      origin: req.get('origin'),
+      headers: req.headers,
+      env: process.env.NODE_ENV,
+      url: req.url
+    });
+  });
 
   app.get('/api/materials', (req, res) => {
     res.json(GLOBAL_STORE);
@@ -102,14 +117,14 @@ async function startServer() {
     res.json({ success: true });
   });
 
-  // 4. API 404 Handler - MUST be after ALL API routes but BEFORE Vite/Static
   app.use('/api/*', (req, res) => {
-    console.warn(`[API 404] ${req.method} ${req.originalUrl} - Host: ${req.get('host')}`);
+    console.warn(`[API 404] ${req.method} ${req.originalUrl} - Host: ${req.get('host')} - Origin: ${req.get('origin')}`);
     res.status(404).json({ 
       error: 'API 接口不存在', 
       path: req.originalUrl,
       method: req.method,
-      suggestion: '请确认请求路径和方法(POST/GET)是否正确'
+      host: req.get('host'),
+      suggestion: '请检查 Cloudflare 是否有缓存或 Page Rules 拦截了该路径。'
     });
   });
 
