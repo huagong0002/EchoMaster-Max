@@ -160,8 +160,9 @@ export default function App() {
     setAuthError(null);
     console.log('--- Attempting Login ---');
     try {
-      const apiUrl = '/api/auth/login';
-      console.log(`Fetching: ${window.location.origin}${apiUrl}`);
+      // 优先尝试当前域名的 /api/login
+      const apiUrl = '/api/login';
+      console.log(`Fetching from: ${window.location.origin}${apiUrl}`);
       
       const res = await fetch(apiUrl, {
         method: 'POST',
@@ -182,8 +183,9 @@ export default function App() {
         }
       } else {
         const text = await res.text();
-        console.error('Non-JSON response received:', text.substring(0, 100));
-        setAuthError(`服务器异常 (HTTP ${res.status}): 请检查网络或联系管理员`);
+        console.error('Non-JSON response (404/Error Page):', text.substring(0, 50));
+        // 如果 404，提示用户检查后端部署
+        setAuthError(`登录接口返回异常 (${res.status}): 请确保后端服务已启动且路径正确`);
       }
     } catch (err: any) {
       console.error('CRITICAL: Login Network Error', err);
@@ -197,7 +199,7 @@ export default function App() {
     setAuthError(null);
     console.log('--- Attempting Register ---');
     try {
-      const apiUrl = '/api/auth/register';
+      const apiUrl = '/api/register';
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,8 +222,8 @@ export default function App() {
         }
       } else {
         const text = await res.text();
-        console.error('Register Non-JSON response:', text.substring(0, 100));
-        setAuthError(`注册失败 (HTTP ${res.status}): 服务器暂时不可用`);
+        console.error('Register Non-JSON response:', text.substring(0, 50));
+        setAuthError(`注册失败 (HTTP ${res.status}): 服务器路由未找到`);
       }
     } catch (err: any) {
       console.error('CRITICAL: Register Network Error', err);

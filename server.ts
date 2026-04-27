@@ -30,7 +30,7 @@ async function startServer() {
   // In-memory Global Store for materials
   let GLOBAL_STORE: any[] = [];
   let USERS: any[] = [
-    { id: '1', username: 'admin', password: 'admin', email: 'admin@e-listen.com', role: 'admin' },
+    { id: '1', username: 'admin', password: 'admin123', email: 'admin@e-listen.com', role: 'admin' },
     { id: '2', username: 'tester', password: 'password', email: 'tester@example.com', role: 'user' }
   ];
 
@@ -68,9 +68,9 @@ async function startServer() {
   };
 
   app.post('/api/auth/login', handleLogin);
-  app.post('/api/login', handleLogin); // 兼容某些外部请求习惯
+  app.post('/api/login', handleLogin);
   app.post('/api/auth/register', handleRegister);
-  app.post('/api/register', handleRegister); // 兼容
+  app.post('/api/register', handleRegister);
 
   // 4. API 404 Handler - MUST be before Vite/Static
   app.use('/api/*', (req, res) => {
