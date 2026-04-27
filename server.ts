@@ -68,9 +68,15 @@ async function startServer() {
   };
 
   app.post('/api/auth/login', handleLogin);
-  app.post('/api/login', handleLogin); // Alias
+  app.post('/api/login', handleLogin); // 兼容某些外部请求习惯
   app.post('/api/auth/register', handleRegister);
-  app.post('/api/register', handleRegister); // Alias
+  app.post('/api/register', handleRegister); // 兼容
+
+  // 4. API 404 Handler - MUST be before Vite/Static
+  app.use('/api/*', (req, res) => {
+    console.error(`API Route Not Found: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ error: `API 接口不存在: ${req.originalUrl}` });
+  });
 
   app.get('/api/materials', (req, res) => {
     res.json(GLOBAL_STORE);
