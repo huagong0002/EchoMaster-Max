@@ -160,10 +160,9 @@ export default function App() {
     setAuthError(null);
     console.log('--- Attempting Login ---');
     try {
-      // 自动识别当前环境：如果是预览环境则用相对路径，否则记录异常
+      // 优先尝试当前域名的 /api/login
       const apiUrl = '/api/login';
-      const fullUrl = `${window.location.origin}${apiUrl}`;
-      console.log(`[Auth] Fetching: ${fullUrl}`);
+      console.log(`Fetching from: ${window.location.origin}${apiUrl}`);
       
       const res = await fetch(apiUrl, {
         method: 'POST',
@@ -175,25 +174,23 @@ export default function App() {
       if (contentType && contentType.includes('application/json')) {
         const data = await res.json();
         if (res.ok) {
-          console.log('[Auth] Login Success:', data.user.username);
+          console.log('Login Success:', data.user.username);
           setUser(data.user);
           localStorage.setItem('echomaster_user', JSON.stringify(data.user));
         } else {
-          console.warn('[Auth] Login Rejected:', data.error);
+          console.warn('Login Rejected:', data.error);
           setAuthError(data.error);
         }
       } else {
         const text = await res.text();
-        console.error('[Auth] Received invalid response (HTML/Text):', text.substring(0, 50));
-        if (res.status === 404) {
-          setAuthError(`登录失败 (404): 当前域名 ${window.location.hostname} 似乎未运行后端服务。请检查部署或使用 AI Studio 提供的预览链接。`);
-        } else {
-          setAuthError(`服务器异常 (${res.status}): 返回了无法解析的数据格式。`);
-        }
+        console.error('Non-JSON response (404/Error Page):', text.substring(0, 50));
+        // 如果 404，提示用户检查后端部署
+        setAuthError(`登录接口返回异常 (${res.status}): 请确保后端服务已启动且路径正确`);
       }
     } catch (err: any) {
-      console.error('[Auth] Network error during login:', err);
-      setAuthError(`无法连接到服务器: ${err.message || '请检查网络或域名解析'}`);
+      console.error('CRITICAL: Login Network Error', err);
+      // Detailed error for user
+      setAuthError(`网络连接失败: ${err.message || '未知错误'}`);
     }
   };
 
@@ -216,21 +213,21 @@ export default function App() {
       if (contentType && contentType.includes('application/json')) {
         const data = await res.json();
         if (res.ok) {
-          console.log('[Auth] Register Success:', data.user.username);
+          console.log('Register Success:', data.user.username);
           setUser(data.user);
           localStorage.setItem('echomaster_user', JSON.stringify(data.user));
         } else {
-          console.warn('[Auth] Register Rejected:', data.error);
+          console.warn('Register Rejected:', data.error);
           setAuthError(data.error);
         }
       } else {
         const text = await res.text();
-        console.error('[Auth] Register invalid response:', text.substring(0, 50));
-        setAuthError(`注册失败 (HTTP ${res.status}): 后端路由异常或域名配置错误`);
+        console.error('Register Non-JSON response:', text.substring(0, 50));
+        setAuthError(`注册失败 (HTTP ${res.status}): 服务器路由未找到`);
       }
     } catch (err: any) {
-      console.error('[Auth] Network error during register:', err);
-      setAuthError(`注册过程发生网络错误: ${err.message || '无法建立连接'}`);
+      console.error('CRITICAL: Register Network Error', err);
+      setAuthError(`注册过程发生网络错误: ${err.message || '无法连接服务器'}`);
     }
   };
 
