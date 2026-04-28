@@ -1,4 +1,4 @@
-const API_BASE = ""; // 使用相对路径以确保在子域名和主域名下都能正确访问后端 API
+const API_BASE = "https://www.sd-education.online"; // 使用相对路径以确保在子域名和主域名下都能正确访问后端 API
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Play, 
