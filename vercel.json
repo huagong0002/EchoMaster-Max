@@ -10,5 +10,7 @@
       "destination": "/api/index.py"
     }
   ],
-  "installCommand": "pip install -r requirements.txt"
+  "github": {
+    "silent": true
+  }
 }
