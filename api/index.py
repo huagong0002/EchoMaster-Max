@@ -2,10 +2,11 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+# 初始化 Flask 实例
+# 在 Vercel 环境下，变量名必须为 app
 app = Flask(__name__)
 
-# 🚩 核心修正 1：增强 CORS 配置
-# 仅仅 origins="*" 有时是不够的，必须允许特定的 Header 才能通过子域名的身份验证
+# 🚩 核心修正：增强 CORS 配置，确保跨域请求顺畅
 CORS(app, resources={r"/api/*": {
     "origins": "*",
     "methods": ["GET", "POST", "OPTIONS", "DELETE"],
@@ -13,7 +14,8 @@ CORS(app, resources={r"/api/*": {
     "supports_credentials": True
 }})
 
-# --- 模拟数据库存储 ---
+# --- 模拟数据库存储（内存模式） ---
+# 注意：Vercel Serverless 环境会定期重置，生产环境建议对接 Supabase 或 Vercel KV
 GLOBAL_STORE = {
     "materials": [],
     "users": {
@@ -23,28 +25,22 @@ GLOBAL_STORE = {
     }
 }
 
-# 🚩 核心修正 2：增加专用的同步接口以适配您的 App.tsx (第106行)
-# 您的前端代码请求的是 /api/materials/sync，原本的代码里没有这个路径
-@app.route('/api/materials/sync', methods=['POST'])
-def sync_materials():
-    global GLOBAL_STORE
-    try:
-        data = request.get_json()
-        if data and "materials" in data:
-            # 全量更新模式：用前端传来的列表覆盖后端
-            GLOBAL_STORE["materials"] = data["materials"]
-            return jsonify({"status": "success", "count": len(GLOBAL_STORE["materials"])})
-        return jsonify({"status": "error", "message": "无效的数据格式"}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+# 1. 健康检查接口
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({
+        "status": "ok", 
+        "materials_count": len(GLOBAL_STORE["materials"]),
+        "environment": "vercel"
+    })
 
-# 1. 登录接口
+# 2. 登录接口
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
         if not data:
-            return jsonify({"status": "error", "message": "无数据输入"}), 400
+            return jsonify({"status": "error", "message": "Missing JSON body"}), 400
             
         username = data.get('username', '').strip()
         password = data.get('password', '')
@@ -60,12 +56,25 @@ def login():
                 }
             })
         
-        return jsonify({"status": "fail", "message": "账号或密码错误"}), 401
+        return jsonify({"status": "fail", "message": "Invalid credentials"}), 401
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# 2. 基础材料库接口
-@app.route('/api/materials', methods=['GET', 'POST', 'DELETE'])
+# 3. 材料同步接口 (适配 App.tsx 第106行)
+@app.route('/api/materials/sync', methods=['POST'])
+def sync_materials():
+    global GLOBAL_STORE
+    try:
+        data = request.get_json()
+        if data and "materials" in data:
+            GLOBAL_STORE["materials"] = data["materials"]
+            return jsonify({"status": "success", "count": len(GLOBAL_STORE["materials"])})
+        return jsonify({"status": "error", "message": "Invalid format"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 4. 基础材料接口 (支持 GET/POST/DELETE)
+@app.route('/api/materials', methods=['GET', 'POST'])
 @app.route('/api/materials/<id>', methods=['DELETE'])
 def handle_materials(id=None):
     global GLOBAL_STORE
@@ -73,7 +82,8 @@ def handle_materials(id=None):
         if request.method == 'POST':
             new_item = request.get_json()
             if not new_item or 'id' not in new_item:
-                return jsonify({"status": "error", "message": "材料数据不完整"}), 400
+                return jsonify({"status": "error", "message": "Incomplete data"}), 400
+            # 更新或添加
             GLOBAL_STORE["materials"] = [m for m in GLOBAL_STORE["materials"] if m.get('id') != new_item['id']]
             GLOBAL_STORE["materials"].append(new_item)
             return jsonify({"status": "success"})
@@ -88,7 +98,7 @@ def handle_materials(id=None):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# 3. 注册接口
+# 5. 注册接口
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
@@ -98,15 +108,9 @@ def register():
         if u and p:
             GLOBAL_STORE["users"][u] = {"password": p, "role": "user", "name": u}
             return jsonify({"status": "success", "user": {"username": u, "role": "user", "displayName": u}})
-        return jsonify({"status": "fail", "message": "信息不全"}), 400
+        return jsonify({"status": "fail", "message": "Incomplete data"}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# 4. 健康检查
-@app.route('/api/health', methods=['GET'])
-def health():
-    return jsonify({"status": "ok", "materials_count": len(GLOBAL_STORE["materials"])})
-
-# Vercel 启动句柄
-def handler(event, context):
-    return app(event, context)
+# 重要：在 Vercel 部署 Flask 时，不需要 app.run() 
+# 也不需要手动定义 handler 函数，Vercel 会自动识别导入的 app 对象
